@@ -58,7 +58,32 @@ export async function proxy(request: NextRequest) {
   if (isPrivateRoute && !isAuthenticated) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
+  if (
+    isPrivateRoute &&
+    isAuthenticated &&
+    refreshedCookies.some(
+      (cookie) => cookie.name === "accessToken" && Boolean(cookie.value),
+    )
+  ) {
+    const redirectResponse = NextResponse.redirect(request.nextUrl.clone());
 
+    for (const cookie of refreshedCookies) {
+      if (cookie.value === undefined) continue;
+
+      redirectResponse.cookies.set({
+        name: cookie.name,
+        value: cookie.value,
+        path: cookie.path ?? "/",
+        httpOnly: cookie.httpOnly,
+        secure: cookie.secure,
+        sameSite: cookie.sameSite as "strict" | "lax" | "none" | undefined,
+        expires: cookie.expires,
+        maxAge: cookie.maxAge,
+      });
+    }
+
+    return redirectResponse;
+  }
   if (isPublicRoute && isAuthenticated) {
     const redirectResponse = NextResponse.redirect(new URL("/", request.url));
 
