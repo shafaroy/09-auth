@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { parseSetCookie } from "cookie";
 import { checkSession } from "./lib/api/serverApi";
-
 const privateRoutes = ["/notes", "/profile"];
 const publicRoutes = ["/sign-in", "/sign-up"];
 
@@ -18,9 +18,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const accessToken = request.cookies.get("accessToken")?.value;
-  const refreshToken = request.cookies.get("refreshToken")?.value;
+  const cookieStore = await cookies();
 
+  const accessToken = cookieStore.get("accessToken")?.value;
+  const refreshToken = cookieStore.get("refreshToken")?.value;
   let isAuthenticated = Boolean(accessToken);
 
   const refreshedCookies: ReturnType<typeof parseSetCookie>[] = [];
@@ -82,7 +83,7 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
 
   const currentCookies = new Map(
-    request.cookies.getAll().map((cookie) => [cookie.name, cookie.value]),
+    cookieStore.getAll().map((cookie) => [cookie.name, cookie.value]),
   );
 
   for (const cookie of refreshedCookies) {
@@ -91,13 +92,11 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  requestHeaders.set(
-    "cookie",
-    Array.from(currentCookies.entries())
-      .map(([name, value]) => `${name}=${value}`)
-      .join("; "),
-  );
+  const updatedCookieHeader = Array.from(currentCookies.entries())
+    .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+    .join("; ");
 
+  requestHeaders.set("cookie", updatedCookieHeader);
   const response = NextResponse.next({
     request: {
       headers: requestHeaders,
