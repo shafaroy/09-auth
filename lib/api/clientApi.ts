@@ -34,20 +34,17 @@ export async function fetchNoteById(id: string): Promise<Note> {
   const response = await api.get<Note>(`/notes/${id}`);
   return response.data;
 }
-export async function register(data: RegisterRequest): Promise<User> {
-  const response = await api.post<User>("/auth/register", data);
-  return response.data;
-}
-type RegisterRequest = {
-  email: string;
-  password: string;
-};
-type LoginRequest = {
+type AuthRequest = {
   email: string;
   password: string;
 };
 
-export async function login(data: LoginRequest): Promise<User> {
+export async function register(data: AuthRequest): Promise<User> {
+  const response = await api.post<User>("/auth/register", data);
+  return response.data;
+}
+
+export async function login(data: AuthRequest): Promise<User> {
   const response = await api.post<User>("/auth/login", data);
   return response.data;
 }

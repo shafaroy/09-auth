@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseSetCookie } from "cookie";
 
 const privateRoutes = ["/notes", "/profile"];
 const publicRoutes = ["/sign-in", "/sign-up"];
@@ -10,39 +11,92 @@ export async function proxy(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
-  const isPublicRoute = publicRoutes.some((route) => pathname === route);
+  const isPublicRoute = publicRoutes.includes(pathname);
 
   if (!isPrivateRoute && !isPublicRoute) {
     return NextResponse.next();
   }
 
-  let isAuthenticated = false;
+  const accessToken = request.cookies.get("accessToken")?.value;
+  const refreshToken = request.cookies.get("refreshToken")?.value;
 
-  try {
-    const response = await fetch(new URL("/api/auth/session", request.url), {
-      headers: {
-        Cookie: request.headers.get("cookie") ?? "",
-      },
-      cache: "no-store",
-    });
+  let isAuthenticated = Boolean(accessToken);
 
-    if (response.ok) {
-      const session: { success: boolean } = await response.json();
-      isAuthenticated = session.success;
+  const refreshedCookies: ReturnType<typeof parseSetCookie>[] = [];
+
+  if (!accessToken && refreshToken) {
+    try {
+      const response = await fetch(
+        "https://notehub-api.goit.study/auth/session",
+        {
+          headers: {
+            Cookie: request.headers.get("cookie") ?? "",
+          },
+          cache: "no-store",
+        },
+      );
+
+      if (response.ok) {
+        const setCookies = response.headers.getSetCookie();
+
+        for (const cookieString of setCookies) {
+          const parsed = parseSetCookie(cookieString);
+
+          if (parsed.value) {
+            refreshedCookies.push(parsed);
+          }
+        }
+
+        isAuthenticated = refreshedCookies.some(
+          (cookie) => cookie.name === "accessToken",
+        );
+      }
+    } catch (error) {
+      console.error("Session refresh failed:", error);
     }
-  } catch (error) {
-    console.error("Session verification failed:", error);
   }
+
+  let result: NextResponse;
 
   if (isPrivateRoute && !isAuthenticated) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
+    result = NextResponse.redirect(new URL("/sign-in", request.url));
+  } else if (isPublicRoute && isAuthenticated) {
+    result = NextResponse.redirect(new URL("/", request.url));
+  } else {
+    const requestHeaders = new Headers(request.headers);
+
+    for (const cookie of refreshedCookies) {
+      if (cookie.value !== undefined) {
+        request.cookies.set(cookie.name, cookie.value);
+      }
+    }
+
+    requestHeaders.set("cookie", request.cookies.toString());
+
+    result = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  }
+  for (const cookie of refreshedCookies) {
+    if (cookie.value === undefined) {
+      continue;
+    }
+
+    result.cookies.set({
+      name: cookie.name,
+      value: cookie.value,
+      path: cookie.path ?? "/",
+      httpOnly: cookie.httpOnly,
+      secure: cookie.secure,
+      sameSite: cookie.sameSite as "strict" | "lax" | "none" | undefined,
+      expires: cookie.expires,
+      maxAge: cookie.maxAge,
+    });
   }
 
-  if (isPublicRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL("/profile", request.url));
-  }
-
-  return NextResponse.next();
+  return result;
 }
 
 export const config = {
