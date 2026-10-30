@@ -1,53 +1,177 @@
-# NoteHub — homework 08
+# NoteHub — Homework 09: Authentication
 
-A notes application built with Next.js App Router, TypeScript, Axios, TanStack
-Query, and Zustand. The application supports filtering, searching, pagination,
-note previews and details, creating notes, and deleting notes.
+A full-stack notes application built with Next.js App Router, TypeScript, Axios, TanStack Query, and Zustand.
 
-## Development
+This project extends the previous NoteHub application with user authentication, protected routes, user profile management, and secure API requests using cookies.
 
-Use Node.js 20.9 or later. Install the locked dependencies with `npm ci`.
+## Technologies
 
-Create an ignored `.env.local` file and set `NEXT_PUBLIC_NOTEHUB_TOKEN` to your
-NoteHub API token. Do not commit the token. Optionally set `NEXT_PUBLIC_SITE_URL`
-to the production URL; metadata uses `https://notehub.com` until it is supplied.
+- Next.js 16 (App Router)
+- React and TypeScript
+- Axios
+- TanStack Query (React Query)
+- Zustand
+- CSS Modules
+- Next.js Proxy
+- Vercel
 
-Run `npm run dev` to start the development server. The application needs access
-to `notehub-public.goit.study`; Google Fonts must be reachable during compilation
-to download and self-host Roboto.
+## Features
 
-## Creating notes
+### Authentication
 
-The **Create note +** link opens `/notes/action/create`. Changes to the title,
-content, and tag are saved automatically in a Zustand store and persisted under
-the `notehub-draft` localStorage key. Only the draft data is persisted.
+- User registration and login
+- Authentication using HTTP cookies
+- Session verification
+- Logout functionality
+- Protected routes for notes and user profiles
+- Dynamic navigation based on authentication status
 
-**Cancel** returns to the previous page and keeps the draft. Refreshing or
-reopening the form restores it. A failed request keeps the draft and displays an
-error. Successful creation clears the draft, invalidates the notes cache, and
-navigates to `/notes/filter/all`.
+### User Profile
 
-## Checks
+- View user information (username, email, avatar)
+- Edit username
+- Save profile changes through API
+- Update global authentication state using Zustand
+
+### Notes Management
+
+- Display personal notes
+- Filter notes by category
+- Search notes
+- Pagination
+- View note details
+- Create new notes
+- Delete notes
+- Draft persistence using Zustand and localStorage
+
+## Project Structure
+
+```text
+app/
+  (auth routes)/
+    sign-in/
+    sign-up/
+  (private routes)/
+    @modal/
+    notes/
+    profile/
+      edit/
+  api/
+
+components/
+  AuthNavigation/
+  AuthProvider/
+  Header/
+  Footer/
+  NoteForm/
+  NoteList/
+  SearchBox/
+  Pagination/
+
+lib/
+  api/
+    api.ts
+    clientApi.ts
+    serverApi.ts
+  store/
+    authStore.ts
+
+types/
+  note.ts
+  user.ts
+
+proxy.ts
+```
+
+## Getting Started
+
+### 1. Clone the repository
 
 ```bash
+git clone https://github.com/shafaroy/09-auth.git
+cd 09-auth
+```
+
+### 2. Install dependencies
+
+```bash
+npm ci
+```
+
+### 3. Configure environment variables
+
+Create a `.env.local` file in the project root:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+The application communicates with the authenticated NoteHub API through Next.js API routes.
+
+Backend API: https://notehub-api.goit.study
+
+### 4. Start the development server
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000 in your browser.
+
+## Authentication Flow
+
+1. Users register or log in using their email and password.
+2. The backend manages authentication tokens using cookies.
+3. AuthProvider verifies the current session.
+4. Zustand stores the authenticated user's information.
+5. Proxy redirects unauthenticated users away from private routes.
+6. Authenticated users can access their notes and profile.
+7. Users can log out securely.
+
+## Main Routes
+
+| Route                  | Description   | Access        |
+| ---------------------- | ------------- | ------------- |
+| `/`                    | Home page     | Public        |
+| `/sign-up`             | Registration  | Guest         |
+| `/sign-in`             | Login         | Guest         |
+| `/profile`             | User profile  | Authenticated |
+| `/profile/edit`        | Edit username | Authenticated |
+| `/notes/filter/all`    | Notes list    | Authenticated |
+| `/notes/[id]`          | Note details  | Authenticated |
+| `/notes/action/create` | Create note   | Authenticated |
+
+## Quality Checks
+
+Run the following commands before deployment:
+
+```bash
+npx tsc --noEmit
 npm run lint
 npx prettier --check .
 npm run build
 ```
 
-The production build includes TypeScript validation. Run `npm start` after a
-successful build to serve the production application.
+## Deployment
 
-## Vercel submission
+The project is designed for deployment on Vercel.
 
-Import `shafaroy/08-zustand` into Vercel using the Next.js preset. Set
-`NEXT_PUBLIC_NOTEHUB_TOKEN` in the Vercel project's environment variables. Set
-`NEXT_PUBLIC_SITE_URL` to its stable production URL so Open Graph links point to
-the deployed application. Redeploy after changing these variables because
-`NEXT_PUBLIC_` values are captured during compilation.
+Configure the following environment variable in Vercel:
 
-Before submitting, check the production URL, filtering, note details, draft
-restoration after reload and Cancel, and successful note creation and deletion.
-Submit both the GitHub repository URL and the Vercel production URL. The
-assignment also asks to wait five minutes after the GitHub update before
-submitting.
+```env
+NEXT_PUBLIC_API_URL=https://YOUR-PROJECT.vercel.app
+```
+
+Use the actual production domain of your application, without `/api` at the end.
+
+Redeploy after modifying environment variables.
+
+Before submitting the homework, verify registration, login, logout, session persistence, protected routes, profile editing, and note management in the deployed application.
+
+## Author
+
+**Oksana Shafar**
+
+GitHub: https://github.com/shafaroy
+
+Developed as part of the GoIT Fullstack Development course.
